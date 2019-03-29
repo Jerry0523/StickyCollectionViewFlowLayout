@@ -12,9 +12,11 @@
 		C4F200812241EA6900CDE725 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C4F2007F2241EA6900CDE725 /* Main.storyboard */; };
 		C4F200832241EA6B00CDE725 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C4F200822241EA6B00CDE725 /* Assets.xcassets */; };
 		C4F200862241EA6B00CDE725 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C4F200842241EA6B00CDE725 /* LaunchScreen.storyboard */; };
+		C4F2008E2241EB9E00CDE725 /* StickyCollectionViewFlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F2008D2241EB9E00CDE725 /* StickyCollectionViewFlowLayout.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		C4737EE1224DEA72008B6CF4 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
 		C4F200782241EA6900CDE725 /* StickyCollectionViewFlowLayout.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StickyCollectionViewFlowLayout.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C4F2007B2241EA6900CDE725 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		C4F2007D2241EA6900CDE725 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -22,6 +24,7 @@
 		C4F200822241EA6B00CDE725 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C4F200852241EA6B00CDE725 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		C4F200872241EA6B00CDE725 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C4F2008D2241EB9E00CDE725 /* StickyCollectionViewFlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyCollectionViewFlowLayout.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -56,8 +59,10 @@
 			children = (
 				C4F2007B2241EA6900CDE725 /* AppDelegate.swift */,
 				C4F2007D2241EA6900CDE725 /* ViewController.swift */,
+				C4F2008D2241EB9E00CDE725 /* StickyCollectionViewFlowLayout.swift */,
 				C4F2007F2241EA6900CDE725 /* Main.storyboard */,
 				C4F200822241EA6B00CDE725 /* Assets.xcassets */,
+				C4737EE1224DEA72008B6CF4 /* README.md */,
 				C4F200842241EA6B00CDE725 /* LaunchScreen.storyboard */,
 				C4F200872241EA6B00CDE725 /* Info.plist */,
 			);
@@ -135,6 +140,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C4F2008E2241EB9E00CDE725 /* StickyCollectionViewFlowLayout.swift in Sources */,
 				C4F2007E2241EA6900CDE725 /* ViewController.swift in Sources */,
 				C4F2007C2241EA6900CDE725 /* AppDelegate.swift in Sources */,
 			);
@@ -285,13 +291,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = F93845W87F;
 				INFOPLIST_FILE = StickyCollectionViewFlowLayout/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.jerry.StickyCollectionViewFlowLayout;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -303,13 +310,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = F93845W87F;
 				INFOPLIST_FILE = StickyCollectionViewFlowLayout/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.jerry.StickyCollectionViewFlowLayout;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;

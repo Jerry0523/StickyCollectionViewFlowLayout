@@ -2,7 +2,7 @@
 //  AppDelegate.swift
 //  StickyCollectionViewFlowLayout
 //
-//  Created by 王杰 on 2019/3/20.
+//  Created by Jerry Wong on 2019/3/20.
 //  Copyright © 2019 com.jerry. All rights reserved.
 //
 
