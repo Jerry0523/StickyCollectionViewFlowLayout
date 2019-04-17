@@ -22,18 +22,6 @@ import UIKit
 
 open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
     
-    open var fixedStickyContentOffset: CGPoint {
-        get {
-            guard let stickyElements = stickyElements,
-                  stickyCursor >= 0,
-                  stickyCursor < stickyElements.count else {
-                return CGPoint.zero
-            }
-            let element = stickyElements[stickyCursor]
-            return element.fixedOffset ?? CGPoint.zero
-        }
-    }
-    
     override open var sectionHeadersPinToVisibleBounds: Bool {
         
         get { return false }
@@ -57,6 +45,21 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
     
     override open func shouldInvalidateLayout(forBoundsChange newBounds: CGRect) -> Bool {
         return (stickyElements?.count ?? 0) > 0
+    }
+    
+    override open func targetContentOffset(forProposedContentOffset proposedContentOffset: CGPoint) -> CGPoint {
+        guard let stickyElements = stickyElements,
+            stickyCursor >= 0,
+            stickyCursor < stickyElements.count else {
+                return proposedContentOffset
+        }
+        let element = stickyElements[stickyCursor]
+        var dest = proposedContentOffset
+        if let fixed = element.fixedOffset {
+            dest.x += fixed.x
+            dest.y += fixed.y
+        }
+        return dest
     }
     
     override open func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {

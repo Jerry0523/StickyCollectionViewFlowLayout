@@ -114,15 +114,8 @@ class ViewController: UIViewController, UICollectionViewDataSource, StickyCollec
     }
     
     func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
-        if let flowLayout = collectionView.collectionViewLayout as? StickyCollectionViewFlowLayout {
-            let fixed = flowLayout.fixedStickyContentOffset
-            if isVertical {
-                targetContentOffset.pointee.y += fixed.y
-            } else {
-                targetContentOffset.pointee.x += fixed.x
-            }
-            
-        }
+        let dest = collectionView.collectionViewLayout.targetContentOffset(forProposedContentOffset: targetContentOffset.pointee)
+        targetContentOffset.pointee = dest
     }
     
 }
