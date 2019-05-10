@@ -8,15 +8,33 @@
 
 import UIKit
 
-@objc protocol StickyCollectionViewFlowLayoutDelegate : UICollectionViewDelegateFlowLayout {
+protocol StickyCollectionViewFlowLayoutDelegate : UICollectionViewDelegateFlowLayout {
     
-    @objc optional func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyDistanceAt indexPath: IndexPath) -> NSNumber?
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyDistanceAt indexPath: IndexPath) -> CGFloat?
     
-    @objc optional func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyDistanceForHeaderInSection section: Int) -> NSNumber?
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyDistanceForHeaderInSection section: Int) -> CGFloat?
     
-    @objc optional func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyDistanceForFooterInSection section: Int) -> NSNumber?
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyDistanceForFooterInSection section: Int) -> CGFloat?
     
-    @objc optional func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyInsetsDidChange stickyInsets: UIEdgeInsets)
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyInsetsDidChange stickyInsets: UIEdgeInsets)
+    
+}
+
+extension StickyCollectionViewFlowLayoutDelegate {
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyDistanceAt indexPath: IndexPath) -> CGFloat? {
+        return nil
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyDistanceForHeaderInSection section: Int) -> CGFloat? {
+        return nil
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyDistanceForFooterInSection section: Int) -> CGFloat? {
+        return nil
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyInsetsDidChange stickyInsets: UIEdgeInsets) {}
     
 }
 
@@ -65,7 +83,11 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
     override open func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
         var attrs = super.layoutAttributesForElements(in: rect)
         
-        if let stickyInfos = moveStickyElements(in: rect) {
+        if let stickyInfo = moveStickyElement(in: rect) {
+            var stickyInfos = [stickyInfo]
+            if let toBeFilledStickyElements = fillBackwards(stickyInfo: stickyInfo, buffer: stickyElements!) {
+                stickyInfos.append(contentsOf: toBeFilledStickyElements)
+            }
             attrs = attrs?.filter { attr in stickyInfos.reduce(0, { $0 + ($1.element.matches(for: attr) ? 1 : 0) }) == 0 }
             attrs?.append(contentsOf: stickyInfos.map{ $0.attr })
         }
@@ -82,7 +104,37 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
         super.invalidateLayout(with: context)
     }
     
-    private func moveStickyElements(in rect: CGRect) -> [StickyInfo]? {
+    private func fillBackwards(stickyInfo: StickyInfo, buffer: [StickyElement]) -> [StickyInfo]? {
+        guard let offset = scrollDirection == .vertical ? collectionView?.contentOffset.y : collectionView?.contentOffset.x,
+            (scrollDirection == .vertical ? stickyInfo.attr.frame.minY : stickyInfo.attr.frame.minX) > offset,
+                stickyInfo.cursor > 0,
+                stickyInfo.cursor <= buffer.count - 1 else {
+                return nil
+        }
+
+        let toBeFilledBuffer = buffer[0..<stickyInfo.cursor]
+        return toBeFilledBuffer
+                .reversed()
+                .reduce(into: (scrollDirection == .vertical ? stickyInfo.attr.frame.minY : stickyInfo.attr.frame.minX,  [StickyInfo]()), { result, element in
+                    if result.0 > offset, let attr = element.layoutAttribute(for: self) {
+                        switch scrollDirection {
+                        case .vertical:
+                            attr.transform = CGAffineTransform(translationX: 0, y: result.0 - attr.frame.maxY)
+                            result.0 = attr.frame.minY
+                        case .horizontal:
+                            attr.transform = CGAffineTransform(translationX: result.0 - attr.frame.maxX, y: 0)
+                            result.0 = attr.frame.minX
+                        @unknown default:
+                            fatalError()
+                        }
+                        attr.zIndex = StickyZIndex
+                        result.1.append(StickyInfo(element: element, attr: attr, cursor: 0))
+                    }
+                    
+                }).1
+    }
+    
+    private func moveStickyElement(in rect: CGRect) -> StickyInfo? {
         guard
             let collectionView = collectionView,
             let stickyElements = stickyElements,
@@ -113,24 +165,24 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
             return (-1...itemCount).compactMap { itemIndex in
                 let indexPath: IndexPath
                 let category: StickyElement.Category
-                let distance: NSNumber?
+                let distance: CGFloat?
                 switch itemIndex {
                 case -1:
                     category = .header
                     indexPath = IndexPath(item: 0, section: sectionIndex)
-                    distance = stickyDelegate.collectionView?(collectionView, layout: self, stickyDistanceForHeaderInSection: sectionIndex)
+                    distance = stickyDelegate.collectionView(collectionView, layout: self, stickyDistanceForHeaderInSection: sectionIndex)
                 case itemCount:
                     category = .footer
                     indexPath = IndexPath(item: 0, section: sectionIndex)
-                    distance = stickyDelegate.collectionView?(collectionView, layout: self, stickyDistanceForFooterInSection: sectionIndex)
+                    distance = stickyDelegate.collectionView(collectionView, layout: self, stickyDistanceForFooterInSection: sectionIndex)
                 default:
                     category = .cell
                     indexPath = IndexPath(item: itemIndex, section: sectionIndex)
-                    distance = stickyDelegate.collectionView?(collectionView, layout: self, stickyDistanceAt: indexPath)
+                    distance = stickyDelegate.collectionView(collectionView, layout: self, stickyDistanceAt: indexPath)
                 }
                 
                 if let distance = distance {
-                    return StickyElement(category: category, indexPath: indexPath, distance: CGFloat(truncating: distance))
+                    return StickyElement(category: category, indexPath: indexPath, distance: distance)
                 } else {
                     return nil
                 }
@@ -147,7 +199,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
             if oldValue != stickyInsets,
                 let collectionView = collectionView,
                 let delegate = collectionView.delegate as? StickyCollectionViewFlowLayoutDelegate {
-                delegate.collectionView?(collectionView, layout: self, stickyInsetsDidChange: stickyInsets)
+                delegate.collectionView(collectionView, layout: self, stickyInsetsDidChange: stickyInsets)
             }
         }
     }
@@ -160,11 +212,13 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
         
         let attr: UICollectionViewLayoutAttributes
         
+        let cursor: Int
+        
     }
     
     private struct StickyElement {
         
-        typealias Procedure = (inout [StickyElement], inout Int, CGFloat, StickyCollectionViewFlowLayout) -> [StickyInfo]?
+        typealias Procedure = (inout [StickyElement], inout Int, CGFloat, StickyCollectionViewFlowLayout) -> StickyInfo?
         
         public enum Category : UInt {
             
@@ -259,7 +313,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
             return (currentAttr, refAttr)
         }
         
-        func replaceBackward(with buffer: inout [StickyElement], cursor: inout Int, offset: CGFloat, for layout: StickyCollectionViewFlowLayout) -> [StickyInfo]? {
+        func replaceBackward(with buffer: inout [StickyElement], cursor: inout Int, offset: CGFloat, for layout: StickyCollectionViewFlowLayout) -> StickyInfo? {
             
             guard cursor > 0 else {
                 return nil
@@ -277,7 +331,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
                     StickyElement.replaceElement(fixedOffset: nil, cursor: cursor, buffer: &buffer)
                     cursor -= 1
                     layout.stickyInsets = UIEdgeInsets(top: refAttr.frame.height, left: 0, bottom: 0, right: 0)
-                    return [StickyInfo(element: reference, attr: refAttr)]
+                    return StickyInfo(element: reference, attr: refAttr, cursor: cursor)
                 }
             case .horizontal:
                 if currentAttr.frame.minX >= offset + reference.distance + refAttr.frame.width {
@@ -286,7 +340,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
                     StickyElement.replaceElement(fixedOffset: nil, cursor: cursor, buffer: &buffer)
                     cursor -= 1
                     layout.stickyInsets = UIEdgeInsets(top: 0, left: refAttr.frame.width, bottom: 0, right: 0)
-                    return [StickyInfo(element: reference, attr: refAttr)]
+                    return StickyInfo(element: reference, attr: refAttr, cursor: cursor)
                 }
             @unknown default:
                 break
@@ -294,7 +348,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
             return nil
         }
         
-        func replaceForward(with buffer: inout [StickyElement], cursor: inout Int, offset: CGFloat, for layout: StickyCollectionViewFlowLayout) -> [StickyInfo]? {
+        func replaceForward(with buffer: inout [StickyElement], cursor: inout Int, offset: CGFloat, for layout: StickyCollectionViewFlowLayout) -> StickyInfo? {
             
             guard buffer.count > cursor + 1 else {
                 return nil
@@ -312,7 +366,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
                     StickyElement.replaceElement(fixedOffset: nil, cursor: cursor, buffer: &buffer)
                     cursor += 1
                     layout.stickyInsets = UIEdgeInsets(top: refAttr.frame.height, left: 0, bottom: 0, right: 0)
-                    return [StickyInfo(element: reference, attr: refAttr)]
+                    return StickyInfo(element: reference, attr: refAttr, cursor: cursor)
                 }
             case .horizontal:
                 if refAttr.frame.minX <= offset + reference.distance {
@@ -321,7 +375,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
                     StickyElement.replaceElement(fixedOffset: nil, cursor: cursor, buffer: &buffer)
                     cursor += 1
                     layout.stickyInsets = UIEdgeInsets(top: 0, left: refAttr.frame.width, bottom: 0, right: 0)
-                    return [StickyInfo(element: reference, attr: refAttr)]
+                    return StickyInfo(element: reference, attr: refAttr, cursor: cursor)
                 }
             @unknown default:
                 break
@@ -329,7 +383,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
             return nil
         }
         
-        func replacingForward(with buffer: inout [StickyElement], cursor: inout Int, offset: CGFloat, for layout: StickyCollectionViewFlowLayout) -> [StickyInfo]? {
+        func replacingForward(with buffer: inout [StickyElement], cursor: inout Int, offset: CGFloat, for layout: StickyCollectionViewFlowLayout) -> StickyInfo? {
             
             guard buffer.count > cursor + 1 else {
                 return nil
@@ -352,7 +406,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
                         StickyElement.replaceElement(fixedOffset: CGPoint(x: 0, y: -progress * currentAttr.frame.height), cursor: cursor, buffer: &buffer)
                     }
                     layout.stickyInsets = UIEdgeInsets(top: refAttr.frame.maxY - offset, left: 0, bottom: 0, right: 0)
-                    return [StickyInfo(element: self, attr: currentAttr)]
+                    return StickyInfo(element: self, attr: currentAttr, cursor: cursor)
                 }
             case .horizontal:
                 if refAttr.frame.minX < offset + distance + currentAttr.frame.width && refAttr.frame.minX > offset {
@@ -366,7 +420,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
                         StickyElement.replaceElement(fixedOffset: CGPoint(x: -progress * currentAttr.frame.width, y: 0), cursor: cursor, buffer: &buffer)
                     }
                     layout.stickyInsets = UIEdgeInsets(top: 0, left: refAttr.frame.maxX - offset, bottom: 0, right: 0)
-                    return [StickyInfo(element: self, attr: currentAttr)]
+                    return StickyInfo(element: self, attr: currentAttr, cursor: cursor)
                 }
             @unknown default:
                 break
@@ -375,7 +429,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
             return nil
         }
         
-        func replacingBackward(with buffer: inout [StickyElement], cursor: inout Int, offset: CGFloat, for layout: StickyCollectionViewFlowLayout) -> [StickyInfo]? {
+        func replacingBackward(with buffer: inout [StickyElement], cursor: inout Int, offset: CGFloat, for layout: StickyCollectionViewFlowLayout) -> StickyInfo? {
             
             guard cursor > 0 else {
                 return nil
@@ -399,7 +453,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
                         StickyElement.replaceElement(fixedOffset: CGPoint(x: 0, y: (1 - progress) * refAttr.frame.height), cursor: cursor, buffer: &buffer)
                     }
                     layout.stickyInsets = UIEdgeInsets(top: currentAttr.frame.maxY - offset, left: 0, bottom: 0, right: 0)
-                    return [StickyInfo(element: reference, attr: refAttr)]
+                    return StickyInfo(element: reference, attr: refAttr, cursor: cursor - 1)
                 }
             case .horizontal:
                 if currentAttr.frame.minX > offset + distance
@@ -414,7 +468,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
                         StickyElement.replaceElement(fixedOffset: CGPoint(x: (1 - progress) * refAttr.frame.width, y: 0), cursor: cursor, buffer: &buffer)
                     }
                     layout.stickyInsets = UIEdgeInsets(top: 0, left: currentAttr.frame.maxX - offset, bottom: 0, right: 0)
-                    return [StickyInfo(element: reference, attr: refAttr)]
+                    return StickyInfo(element: reference, attr: refAttr, cursor: cursor - 1)
                 }
             @unknown default:
                 break
@@ -423,7 +477,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
             return nil
         }
         
-        func keepSticky(with buffer: inout [StickyElement], cursor: inout Int, offset: CGFloat, for layout: StickyCollectionViewFlowLayout) -> [StickyInfo]? {
+        func keepSticky(with buffer: inout [StickyElement], cursor: inout Int, offset: CGFloat, for layout: StickyCollectionViewFlowLayout) -> StickyInfo? {
             
             guard let currentAttr = layoutAttribute(for: layout),
                 currentAttr.frame != CGRect.zero else {
@@ -437,7 +491,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
                     currentAttr.zIndex = StickyZIndex
                     StickyElement.replaceElement(fixedOffset: nil, cursor: cursor, buffer: &buffer)
                     layout.stickyInsets = UIEdgeInsets(top: currentAttr.frame.height, left: 0, bottom: 0, right: 0)
-                    return [StickyInfo(element: self, attr: currentAttr)]
+                    return StickyInfo(element: self, attr: currentAttr, cursor: cursor)
                 }
             case .horizontal:
                 if currentAttr.frame.minX < offset + distance || (offset + distance < 0 && indexPath == IndexPath(item: 0, section: 0)) {
@@ -445,7 +499,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
                     currentAttr.zIndex = StickyZIndex
                     StickyElement.replaceElement(fixedOffset: nil, cursor: cursor, buffer: &buffer)
                     layout.stickyInsets = UIEdgeInsets(top: 0, left: currentAttr.frame.width, bottom: 0, right: 0)
-                    return [StickyInfo(element: self, attr: currentAttr)]
+                    return StickyInfo(element: self, attr: currentAttr, cursor: cursor)
                 }
             @unknown default:
                 break
