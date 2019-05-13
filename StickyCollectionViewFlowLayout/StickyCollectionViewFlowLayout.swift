@@ -10,12 +10,16 @@ import UIKit
 
 protocol StickyCollectionViewFlowLayoutDelegate : UICollectionViewDelegateFlowLayout {
     
+    ///Ask you about the specific distance you want to pin the cell with. Return nil if not a sticky element.
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyDistanceAt indexPath: IndexPath) -> CGFloat?
     
+    ///Asks you about the specific distance you want to pin the header with. Return nil if not a sticky element.
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyDistanceForHeaderInSection section: Int) -> CGFloat?
     
+    ///Ask you about the specific distance you want to pin the footer with. Return nil if not a sticky element.
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyDistanceForFooterInSection section: Int) -> CGFloat?
     
+    ///Notify you that the current edge insets made by the sticky elements, which could be used to update the scroll indicator insets.
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, stickyInsetsDidChange stickyInsets: UIEdgeInsets)
     
 }
@@ -40,6 +44,17 @@ extension StickyCollectionViewFlowLayoutDelegate {
 
 open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
     
+    ///A type indicates how to deal with the sticky items beyond the sticky region.
+    public enum OverflowMode : Equatable {
+        
+        ///Keep them visible with maxCount limited, nil with no limitation count.
+        case visible(maxCount: Int?)
+        
+        ///Make them hidden, so that there is maximum one visible stikcy item at each time.
+        case hidden
+        
+    }
+    
     override open var sectionHeadersPinToVisibleBounds: Bool {
         
         get { return false }
@@ -52,6 +67,19 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
         get { return false }
         
         set { }
+    }
+    
+    ///The strategy that how to deal with the white space beyond the sticky region.
+    ///The default implementation is make the sticky elements visible with no count limitation.
+    ///so that there maybe as many as you wish according to each element's sticky distance.
+    open var overflowMode = OverflowMode.visible(maxCount: nil) {
+        
+        didSet {
+            if oldValue != overflowMode {
+                invalidateLayout()
+            }
+        }
+        
     }
     
     override open func prepare() {
@@ -85,8 +113,10 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
         
         if let stickyInfo = moveStickyElement(in: rect) {
             var stickyInfos = [stickyInfo]
-            if let toBeFilledStickyElements = fillBackwards(stickyInfo: stickyInfo, buffer: stickyElements!) {
-                stickyInfos.append(contentsOf: toBeFilledStickyElements)
+            if case .visible(let maxCount) = overflowMode {
+                if let toBeFilledStickyElements = fillOverflow(with: stickyInfo, in: stickyElements!, maxCount: maxCount) {
+                    stickyInfos.append(contentsOf: toBeFilledStickyElements)
+                }
             }
             attrs = attrs?.filter { attr in stickyInfos.reduce(0, { $0 + ($1.element.matches(for: attr) ? 1 : 0) }) == 0 }
             attrs?.append(contentsOf: stickyInfos.map{ $0.attr })
@@ -104,7 +134,7 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
         super.invalidateLayout(with: context)
     }
     
-    private func fillBackwards(stickyInfo: StickyInfo, buffer: [StickyElement]) -> [StickyInfo]? {
+    private func fillOverflow(with stickyInfo: StickyInfo, in buffer: [StickyElement], maxCount: Int?) -> [StickyInfo]? {
         guard let offset = scrollDirection == .vertical ? collectionView?.contentOffset.y : collectionView?.contentOffset.x,
             (scrollDirection == .vertical ? stickyInfo.attr.frame.minY : stickyInfo.attr.frame.minX) > offset,
                 stickyInfo.cursor > 0,
@@ -112,9 +142,8 @@ open class StickyCollectionViewFlowLayout : UICollectionViewFlowLayout {
                 return nil
         }
 
-        let toBeFilledBuffer = buffer[0..<stickyInfo.cursor]
-        return toBeFilledBuffer
-                .reversed()
+        return buffer[0..<stickyInfo.cursor]
+            .reversed()[0..<(maxCount != nil ? min(maxCount!, stickyInfo.cursor) : stickyInfo.cursor)]
                 .reduce(into: (scrollDirection == .vertical ? stickyInfo.attr.frame.minY : stickyInfo.attr.frame.minX,  [StickyInfo]()), { result, element in
                     if result.0 > offset, let attr = element.layoutAttribute(for: self) {
                         switch scrollDirection {
